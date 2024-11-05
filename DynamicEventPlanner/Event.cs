@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -27,10 +28,12 @@ namespace DynamicEventPlanner
             EnergyConsumption = energyConsumption;
             Status = false;
             TypeOfEvent = typeOfEvent;
+            Id = Guid.NewGuid().ToString();
         }
 
         [Key]
-        public int Id { get; set; }
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public string Id { get; set; }
         [Required]
         public DateTime Date { get; set; }
         [Required]
