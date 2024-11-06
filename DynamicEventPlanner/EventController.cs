@@ -1,6 +1,9 @@
-﻿using System;
+﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -12,18 +15,24 @@ namespace DynamicEventPlanner
         public EventController()
         {
             eventManager = new EventManager();
+            eventManager.DisplayEventsCompleted += DisplayOptions;
+            eventManager.AddEventCompleted += DisplayOptions;
+
             DisplayOptions();
         }
         public void DisplayOptions()
         {
-            Console.WriteLine("Event handler: ");
-            Console.WriteLine("1: Add new event: ");
-            Console.WriteLine("2: Display existing events: ");
-            Console.WriteLine("3: Back to menu: ");
+            Console.WriteLine("Event handler");
+            Console.WriteLine("1: Add new event");
+            Console.WriteLine("2: Display existing events");
+            Console.WriteLine("3: Edit event");
+            Console.WriteLine("4: Delete event");
+            Console.WriteLine("5: Back to menu");
             
-            if(int.TryParse(Console.ReadLine(), out int input) && (input == 1 || input == 2 || input == 3))
+            if(int.TryParse(Console.ReadLine(), out int input) && (input == 1 || input == 2 || input == 3 || input == 4 || input == 5))
             {
                 InputHandler(input);
+                return;
             }
             else
             {
@@ -43,6 +52,12 @@ namespace DynamicEventPlanner
                     DisplayExistingEvents();
                     break;
                 case 3:
+                    EditEvent();
+                    break;
+                case 4:
+                    DeleteEvent();
+                    break;
+                case 5:
                     BackToMenu();
                     break;
                 default:
@@ -138,20 +153,47 @@ namespace DynamicEventPlanner
 
             
         }
+        private void DisplayExistingEvents()
+        {
+            eventManager.displayEvents();
+        }
+        private void EditEvent()
+        {
+            
+            Console.Clear();
+            Console.Write("Name of event to edit: ");
+            EventDbContext db = new EventDbContext();
+            string name = Console.ReadLine();
+            var eventToFind = db.Events.FirstOrDefault(t => t.Name == name);
+
+            if (name != null && db.Events.ToList().Contains(eventToFind))
+            {
+                
+            }
+            
+
+            /*Event ev = new Event("test", 12, 12, new DateTime(203), new TimeSpan(13), EventType.Concert);
+            int counter = 1;
+            foreach (var prop in ev.GetType().GetProperties())
+            {
+                Console.WriteLine("1: " + ev.Name);
+            }*/
+            
+        }
+        private void DeleteEvent()
+        {
+            Console.WriteLine("Delete: ");
+        }
         private void BackToMenu()
         {
             Console.Clear();
             MainMenu.DisplayMenu();
         }
-
-        private void DisplayExistingEvents()
-        {
-            Console.WriteLine("Boom");
-        }
-        public void EventAddedDisplay(string messege)
+        private void EventAddedDisplay(string messege)
         {
             Console.WriteLine(messege);
         }
+        
 
     }
 }
