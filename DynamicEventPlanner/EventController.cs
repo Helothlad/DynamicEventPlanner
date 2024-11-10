@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Runtime.InteropServices.Marshalling;
 using System.Text;
@@ -12,12 +13,19 @@ namespace DynamicEventPlanner
     public class EventController
     {
         private EventManager eventManager;
+        private EventDbContext db;
         public EventController()
         {
             eventManager = new EventManager();
+            db = new EventDbContext();
             eventManager.DisplayEventsCompleted += DisplayOptions;
             eventManager.AddEventCompleted += DisplayOptions;
+            eventManager.EventDeleteCompleted += DisplayOptions;
+            eventManager.EventUpdated += DisplayOptions;
 
+            eventManager.EventDelited += DisplayMess;
+            eventManager.EventAdded += DisplayMess;
+            eventManager.EventEdited += DisplayMess;
             DisplayOptions();
         }
         public void DisplayOptions()
@@ -52,10 +60,11 @@ namespace DynamicEventPlanner
                     DisplayExistingEvents();
                     break;
                 case 3:
-                    EditEvent();
+                    Console.Clear();
+                    EditEventWithCatch();
                     break;
                 case 4:
-                    DeleteEvent();
+                    DeleteEventWithCatch();
                     break;
                 case 5:
                     BackToMenu();
@@ -68,10 +77,17 @@ namespace DynamicEventPlanner
         private void AddNewEvent()
         {
             Console.Clear();
-            //string name, double honorarium, int energyConsumption, DateTime date, TimeSpan duration
+
+            Console.WriteLine("Enter 0 to return to the menu ");
             Console.Write("Event name: ");
             string name = Console.ReadLine();
 
+            if (name == "0")
+            {
+                Console.Clear();
+                DisplayOptions();
+                return;
+            }
 
             double honorarium;
             while (true)
@@ -92,7 +108,7 @@ namespace DynamicEventPlanner
             while (true)
             {
                 Console.Write("Energy consumption: ");
-                if (int.TryParse(Console.ReadLine(), out energyConsumption) && energyConsumption >= 0)
+                if (int.TryParse(Console.ReadLine(), out energyConsumption) && energyConsumption >= 0 && energyConsumption <= 100)
                 {
                     break;
                 }
@@ -147,7 +163,6 @@ namespace DynamicEventPlanner
                 }
             }
             Event newEvent = new Event(name, honorarium, energyConsumption, date, duration, type);
-            eventManager.EventAdded += EventAddedDisplay;
 
             eventManager.AddEvent(newEvent);
 
@@ -157,39 +172,127 @@ namespace DynamicEventPlanner
         {
             eventManager.displayEvents();
         }
+        public void EditEventWithCatch()
+        {
+            try
+            {
+                EditEvent();
+            }
+            catch (Exception ex) 
+            {
+                Console.WriteLine(ex);
+            }
+        }
+        public void DeleteEventWithCatch()
+        {
+            try
+            {
+                DeleteEvent();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+        }
         private void EditEvent()
         {
             
-            Console.Clear();
+            Console.WriteLine("Enter 0 to return to the menu ");
             Console.Write("Name of event to edit: ");
-            EventDbContext db = new EventDbContext();
             string name = Console.ReadLine();
-            var eventToFind = db.Events.FirstOrDefault(t => t.Name == name);
-
-            if (name != null && db.Events.ToList().Contains(eventToFind))
+            
+            
+            if(name == "0")
             {
-                
+                Console.Clear();
+                DisplayOptions();
+                return;
             }
             
+            var eventToFind = db.Events.FirstOrDefault(t => t.Name == name);
 
-            /*Event ev = new Event("test", 12, 12, new DateTime(203), new TimeSpan(13), EventType.Concert);
-            int counter = 1;
-            foreach (var prop in ev.GetType().GetProperties())
+            if (eventToFind == null)
             {
-                Console.WriteLine("1: " + ev.Name);
-            }*/
+                Console.WriteLine("Event not found.");
+                EditEventWithCatch();
+                return;
+            }
+
+                
+            if (eventToFind.Date < DateTime.Now)
+            {
+                Console.WriteLine("You cannot edit past events.");
+                EditEventWithCatch();
+                return;
+            }
+
+            int counter = 1;
+            Console.WriteLine("Choose the property to edit: ");
+            var properties = eventToFind.GetType().GetProperties();
+            foreach (var prop in properties)
+            {
+                Console.WriteLine($"{counter}: {prop.Name} - {prop.GetValue(eventToFind)}");
+                counter++;
+            }
+
+            if (int.TryParse(Console.ReadLine(), out int choice) && choice > 0 && choice <= counter)
+            {
+                var propertyToEdit = properties[choice - 1].Name;
+                Console.Write($"Enter new value for {propertyToEdit}: ");
+                string newValue = Console.ReadLine();
+                if(propertyToEdit == "EnergyConsumption" && (int.Parse(newValue) < 0 || int.Parse(newValue) > 100))
+                {
+                    throw new Exception("The energy consumption can only be between 0 and 100");
+                }
+                try
+                {
+                    eventManager.UpdateEvent(name, properties[choice - 1].Name, newValue);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+            else
+            {
+                Console.WriteLine("Invalid selection.");
+            }
             
         }
         private void DeleteEvent()
         {
-            Console.WriteLine("Delete: ");
+            Console.WriteLine("Enter 0 to return to the menu ");
+            Console.Write("Name of event to delete: ");
+            string name = Console.ReadLine();
+            if (name == "0")
+            {
+                Console.Clear();
+                DisplayOptions();
+                return;
+            }
+            var eventToDel = db.Events.FirstOrDefault(t => t.Name == name);
+
+            if (eventToDel == null)
+            {
+                Console.WriteLine("Event not found.");
+                DeleteEventWithCatch();
+                return;
+            }
+            try
+            {
+                eventManager.DeleteEvent(eventToDel);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            } 
         }
         private void BackToMenu()
         {
             Console.Clear();
             MainMenu.DisplayMenu();
         }
-        private void EventAddedDisplay(string messege)
+        private void DisplayMess(string messege)
         {
             Console.WriteLine(messege);
         }
